@@ -1,16 +1,21 @@
-from collections import Counter
-import re
-import nltk
-from nltk.corpus import stopwords
-nltk.download('stopwords')
+# src/publisher_analysis.py
+import pandas as pd
 
-class TextAnalysis:
-    def __init__(self, df):
-        self.df = df
-        self.stop_words = set(stopwords.words('english'))
+class PublisherAnalysis:
+    def __init__(self, df: pd.DataFrame):
+        self.df = df.copy()
 
-    def get_top_keywords(self, n=20):
-        all_text = ' '.join(self.df['headline'].dropna())
-        words = re.findall(r'\b\w+\b', all_text.lower())
-        words = [word for word in words if word not in self.stop_words]
-        return Counter(words).most_common(n)
+    def top_publishers(self, n=10):
+        """Top N publishers by article count"""
+        return self.df['publisher'].value_counts().head(n)
+
+    def publisher_article_distribution(self):
+        """Article count per publisher"""
+        return self.df['publisher'].value_counts()
+
+    def unique_email_domains(self):
+        """Extract domain names if publisher is an email"""
+        self.df['domain'] = self.df['publisher'].dropna().apply(
+            lambda x: x.split('@')[-1] if '@' in x else None
+        )
+        return self.df['domain'].value_counts(dropna=True)

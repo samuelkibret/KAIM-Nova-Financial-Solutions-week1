@@ -12,7 +12,7 @@ class EDA:
         return self.df['publisher'].value_counts()
 
     def articles_over_time(self):
-    # Step 1: Parse all dates, allow coercion of bad ones
+        # Step 1: Parse all dates, allow coercion of bad ones
         self.df['date'] = pd.to_datetime(self.df['date'], format="mixed", errors='coerce')
 
         # Step 2: Remove timezone info (if any)
@@ -24,7 +24,7 @@ class EDA:
         # Step 4: Plot number of articles over time
         articles_by_date = self.df['date'].value_counts().sort_index()
 
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(24, 12))
         articles_by_date.plot(kind='bar')
         plt.title("Number of Articles Published Over Time")
         plt.xlabel("Date")

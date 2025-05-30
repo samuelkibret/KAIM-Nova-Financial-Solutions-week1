@@ -1,20 +1,39 @@
+# text_analysis.py (inside src/ folder)
+
 import pandas as pd
+import string
+from collections import Counter
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import os
 
-class TimeSeriesAnalysis:
-    def __init__(self, df: pd.DataFrame):
+# Ensure NLTK data is available and paths are configured
+nltk.download('punkt', download_dir='./nltk_data')
+nltk.download('stopwords', download_dir='./nltk_data')
+nltk.data.path.append(os.path.abspath('./nltk_data'))
+
+class TopicModeling:
+    def __init__(self, df: pd.DataFrame, text_column: str):
         self.df = df.copy()
-        self.df['date'] = pd.to_datetime(self.df['date'])
+        self.text_column = text_column
+        self.stop_words = set(stopwords.words('english'))
+        self.punctuation_table = str.maketrans('', '', string.punctuation)
 
-    def publication_trends_daily(self):
-        """Articles published per day"""
-        return self.df['date'].dt.date.value_counts().sort_index()
+    def preprocess_text(self, text: str):
+        if pd.isna(text):
+            return []
+        # Tokenize
+        tokens = word_tokenize(text.lower())
+        # Remove punctuation and non-alpha
+        cleaned = [word.translate(self.punctuation_table) for word in tokens if word.isalpha()]
+        # Remove stopwords and short tokens
+        filtered = [word for word in cleaned if word not in self.stop_words and len(word) > 2]
+        return filtered
 
-    def publication_by_hour(self):
-        """Articles published by hour of day (UTC-4)"""
-        return self.df['date'].dt.hour.value_counts().sort_index()
-
-    def rolling_avg_publication(self, window=7):
-        """7-day rolling average of article publication count"""
-        daily_counts = self.df['date'].dt.date.value_counts().sort_index()
-        daily_series = pd.Series(daily_counts)
-        return daily_series.rolling(window=window).mean()
+    def extract_common_keywords(self, top_n=20):
+        all_tokens = []
+        for text in self.df[self.text_column]:
+            all_tokens.extend(self.preprocess_text(text))
+        counter = Counter(all_tokens)
+        return counter.most_common(top_n)

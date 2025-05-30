@@ -1,20 +1,19 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 
-class PublisherAnalysis:
+class TimeSeriesAnalysis:
     def __init__(self, df: pd.DataFrame):
         self.df = df.copy()
+        # 🛠 Fix: support mixed datetime formats (with or without timezone)
+        self.df['date'] = pd.to_datetime(self.df['date'], format='mixed', errors='coerce')
+        self.df['date'] = self.df['date'].dt.tz_localize(None)
 
-    def top_publishers(self, n=10):
-        """Top N publishers by article count"""
-        return self.df['publisher'].value_counts().head(n)
+    def publication_trends_daily(self):
+        return self.df['date'].dt.date.value_counts().sort_index()
 
-    def publisher_article_distribution(self):
-        """Article count per publisher"""
-        return self.df['publisher'].value_counts()
+    def publication_by_hour(self):
+        return self.df['date'].dt.hour.value_counts().sort_index()
 
-    def unique_email_domains(self):
-        """Extract domain names if publisher is an email"""
-        self.df['domain'] = self.df['publisher'].dropna().apply(
-            lambda x: x.split('@')[-1] if '@' in x else None
-        )
-        return self.df['domain'].value_counts(dropna=True)
+    def rolling_avg_publication(self, window=7):
+        daily_counts = self.df['date'].dt.date.value_counts().sort_index()
+        return pd.Series(daily_counts).rolling(window=window).mean()
