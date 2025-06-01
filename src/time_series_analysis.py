@@ -1,19 +1,41 @@
+# timeseries.py
+
 import pandas as pd
-import matplotlib.pyplot as plt
 
 class TimeSeriesAnalysis:
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df):
         self.df = df.copy()
-        # 🛠 Fix: support mixed datetime formats (with or without timezone)
-        self.df['date'] = pd.to_datetime(self.df['date'], format='mixed', errors='coerce')
-        self.df['date'] = self.df['date'].dt.tz_localize(None)
+        self.preprocess_dates()
 
-    def publication_trends_daily(self):
-        return self.df['date'].dt.date.value_counts().sort_index()
+    def preprocess_dates(self):
+        self.df['date'] = pd.to_datetime(self.df['date'], errors='coerce')
+        self.df['date'] = self.df['date'].apply(
+            lambda dt: dt.tz_localize('UTC-4') if dt.tzinfo is None else dt
+        )
+        self.df['date_utc'] = self.df['date'].dt.tz_convert('UTC')
+        self.df['date_naive'] = self.df['date_utc'].dt.tz_localize(None)
 
-    def publication_by_hour(self):
-        return self.df['date'].dt.hour.value_counts().sort_index()
+        self.df['year'] = self.df['date_naive'].dt.year
+        self.df['month'] = self.df['date_naive'].dt.month
+        self.df['day'] = self.df['date_naive'].dt.date
+        self.df['hour'] = self.df['date_naive'].dt.hour
+        self.df['weekday'] = self.df['date_naive'].dt.day_name()
 
-    def rolling_avg_publication(self, window=7):
-        daily_counts = self.df['date'].dt.date.value_counts().sort_index()
-        return pd.Series(daily_counts).rolling(window=window).mean()
+    def group_by_day(self):
+        return self.df.groupby('day').size()
+
+    def group_by_month(self):
+        return self.df.groupby([self.df['year'], self.df['month']]).size()
+
+    def detect_spikes(self, daily_counts, window=7, threshold=2.0):
+        rolling_avg = daily_counts.rolling(window=window).mean()
+        return daily_counts[daily_counts > rolling_avg * threshold]
+
+    def hourly_distribution(self):
+        return self.df['hour'].value_counts().sort_index()
+
+    def weekday_distribution(self):
+        return self.df['weekday'].value_counts()
+
+    def get_dataframe(self):
+        return self.df.copy()
